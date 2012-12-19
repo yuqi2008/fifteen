@@ -13,13 +13,26 @@
 
 int8_t tentative_g_score = 0;
 FILE *debug_log;
-int loop_num = 10000;
+long loop_num = 512;
 
 struct n3_node{
         struct rb_node rb_nine;
 	uint64_t    compact;
+	uint64_t    heap_id;
 	struct n3_node *pre;
 };
+
+void zero_heap_id(struct n3_node *pnode)
+{
+	pnode->heap_id = 0;
+}
+
+uint64_t get_heap_id(struct n3_node *pnode)
+{
+	return pnode->heap_id;
+}
+
+
 
 
 struct rb_root *proot = NULL;
@@ -37,16 +50,16 @@ void print_matrix(FILE *fp, uint64_t part)
 }
 
 
-void log_node(FILE * in, uint64_t part, char zpos, char mht, char rd, short heap_id)
+void log_node(FILE * in, uint64_t part, char zpos, char mht, char rd)
 {
-	fprintf(in, "part is %lx#zpos is %d#mht is %d#rd is %d#heap_id is %d\n", part, zpos, mht, rd, heap_id);
+	fprintf(in, "part is %lx#zpos is %d#mht is %d#rd is %d\n", part, zpos, mht, rd);
 	print_matrix(in, part);
 	fprintf(in, "********************************************************\n");
 }
 
 	
 	
-int nine_heap_cmp(void **A, int i, int j)
+long nine_heap_cmp(void **A, long i, long j)
 {
 	struct n3_node *p, *q;
 	int m, n;
@@ -58,19 +71,16 @@ int nine_heap_cmp(void **A, int i, int j)
 	return m - n;
 }
 
-void nine_heap_node(void *element, int i)
+void nine_heap_node(void *element, long i)
 {
 	struct n3_node *p;
-	long t = 0xFFF;
-	if (i == 1<<12){
+	if (i == 1<<32 - 1){
 		fprintf(stderr, "overflow, %d\n", tentative_g_score);
 		abort();
 	}
 
 	p = element;
-	p->compact &= ~(t << 52);
-	t = i;
-	p->compact |= t << 52;
+	p->heap_id = i;
 }
 	
 int part_cmp(uint64_t p, uint64_t q)
@@ -146,11 +156,12 @@ struct n3_node *link_node(struct n3_node *node, struct rb_root *proot, char sear
 
 
 	
-void generate_node(struct n3_node **pnode, uint64_t data, struct n3_node *pre_node)
+void generate_node(struct n3_node **pnode, uint64_t data, uint64_t id,  struct n3_node *pre_node)
 {
 	*pnode = alloc_in_mpool();
 	(*pnode)->compact = data;
 	(*pnode)->pre = pre_node;
+	(*pnode)->heap_id = id;
 	rb_init_node(&(*pnode)->rb_nine);
 }
 
@@ -170,14 +181,14 @@ void init_A_star(int nine[3][3])
 	init_goal();
 	uint64_t part;
 	uint8_t zpos, mht, rd = 0;
-	uint16_t heap_id = 1;
+	uint64_t heap_id = 1;
 	part = array2long(nine, &zpos);
 	mht = mht_dist(part);
-	part = join_data(part, zpos, mht, rd, heap_id);
+	part = join_data(part, zpos, mht, rd);
 	
 	//generate first node
 	struct n3_node *current;
-	generate_node(&current, part, NULL);
+	generate_node(&current, part, heap_id, NULL);
 
 	//put node in rbtree
 	struct rb_node **nine_rb_pos, *nine_parent;
@@ -202,7 +213,7 @@ void A_star(int nine[3][3])
 	int8_t zpos0, zpos1;
 	int8_t mht0, mht1;
 	int8_t rd0, rd1; //tentative_g_score;
-	uint16_t heap_id0, heap_id1;
+	uint64_t heap_id0, heap_id1;
 	struct rb_node **select_rb_pos, *select_rb_parent;
 
 
@@ -217,13 +228,16 @@ void A_star(int nine[3][3])
 			exit(0);
 		}
 		heap_extract_min(nine_heap, nine_heap_cmp, nine_heap_node);
-		split_data(current->compact, &part0, &zpos0, &mht0, &rd0, &heap_id0);
+		split_data(current->compact, &part0, &zpos0, &mht0, &rd0);
+		heap_id0 = current->heap_id;
 		#ifdef _NINE_DEBUG
 		fprintf(debug_log, "checkout a node:\n");
-		log_node(debug_log, part0, zpos0, mht0, rd0, heap_id0);
+		log_node(debug_log, part0, zpos0, mht0, rd0);
+		fprintf(debug_log, "with heap_id: %ld\n", heap_id0);
+		fprintf(debug_log, "array size is %ld, heap size is %ld\n", array_size,heap_size);
 		fprintf(debug_log, "\n\n");
 		#endif
-		current->compact = zero_heap_id(current->compact);
+		zero_heap_id(current);
 		for (i = 0; i < 4; i++){
 			part1 = partern_swap(part0, i, zpos0, &zpos1);
 			if (!part1)
@@ -232,36 +246,37 @@ void A_star(int nine[3][3])
 			tentative_g_score = rd0 + 1;
 			#ifdef _NINE_DEBUG
 			fprintf(debug_log, "calculate  node number:\n");
-			log_node(debug_log, part1, zpos1, mht1, tentative_g_score, 0);
+			log_node(debug_log, part1, zpos1, mht1, tentative_g_score);
 			#endif
 			select_node = search_node(part1, proot, &select_rb_pos, &select_rb_parent);
 			if (!select_node){
-				part1 = join_data(part1, zpos1, mht1, tentative_g_score, 0);
-				generate_node(&select_node, part1, current);
+				part1 = join_data(part1, zpos1, mht1, tentative_g_score);
+				generate_node(&select_node, part1, 0, current);
 				link_node(select_node, proot, select_rb_pos, select_rb_parent);
 				min_heap_insert(&nine_heap, select_node, nine_heap_cmp, nine_heap_node);
 				#ifdef _NINE_DEBUG
-				fprintf(debug_log, "genenrate new  node add in: %lx, heap id is %d\n", select_node->compact, get_heap_id(select_node->compact));
+				fprintf(debug_log, "genenrate new  node add in: %lx, with heap_id %ld\n", select_node->compact, get_heap_id(select_node));
+				fprintf(debug_log, "heap_size is %ld\n", heap_size);
 				fprintf(debug_log, "\n\n");
 				#endif
 				continue;
 			}
-			if ((heap_id1 = get_heap_id(select_node->compact)) == 0){
+			if ((heap_id1 = get_heap_id(select_node)) == 0){
 				#ifdef _NINE_DEBUG
-				fprintf(debug_log, "node %lx already in close set, with heap id %d", select_node->compact, get_heap_id(select_node->compact));
+				fprintf(debug_log, "node %lx already in close set\n", select_node->compact);
 				fprintf(debug_log, "\n\n");
 				#endif
 				continue;
 			}
-			if (get_rd(select_node->compact) > tentative_g_score){
+			if (get_rd(select_node->compact) >= tentative_g_score){
 				select_node->pre = current;
 				set_rd(&select_node->compact, tentative_g_score);
 				#ifdef _NINE_DEBUG
-				fprintf(debug_log, "node %lx's rd can be shorter to %d, with origin heap id %d\n", select_node->compact, tentative_g_score,get_heap_id(select_node->compact));
+				fprintf(debug_log, "node %lx's rd can be shorter to %d, with origin heap id %ld\n", select_node->compact, tentative_g_score,get_heap_id(select_node));
 				#endif
 				min_heap_decrease_key(nine_heap, heap_id1, nine_heap_cmp, nine_heap_node);
 				#ifdef _NINE_DEBUG
-				fprintf(debug_log, "node %lx's heap id is %d", select_node->compact, get_heap_id(select_node->compact));
+				fprintf(debug_log, "node %lx's heap id is %ld", select_node->compact, get_heap_id(select_node));
 				fprintf(debug_log, "\n\n");
 				#endif
 
@@ -269,7 +284,7 @@ void A_star(int nine[3][3])
 		}
 	}
 
-	fprintf(stderr, "failed at array size %d\n", array_size);
+	fprintf(stderr, "failed at heap size %ld, array_size %ld\n", heap_size, array_size);
 
 	
 }
