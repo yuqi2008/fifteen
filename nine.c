@@ -30,7 +30,7 @@ int8_t equal_goal(uint64_t data)
 {
 	uint64_t t = 0xFFFFFFFFF;
 	t &= data;
-	return t == goal_partern;
+	return t == GOAL_NUM;
 }
 
 void init_goal(void)
