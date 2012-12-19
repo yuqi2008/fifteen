@@ -77,7 +77,7 @@ void set_rd(uint64_t *pdata, int8_t new_rd)
 }
 
 
-int8_t get_heap_id(uint64_t data)
+uint16_t get_heap_id(uint64_t data)
 {
 	return data>>52 & 0xFFF;
 }

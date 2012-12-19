@@ -17,7 +17,7 @@ void split_data(uint64_t, uint64_t *, int8_t *, int8_t *, int8_t *, uint16_t *);
 uint64_t join_data(uint64_t, int8_t, int8_t, int8_t, uint16_t);
 int8_t equal_goal(uint64_t);
 uint64_t zero_heap_id(uint64_t);
-int8_t get_heap_id(uint64_t);
+uint16_t get_heap_id(uint64_t);
 int8_t get_rd(uint64_t);
 void set_rd(uint64_t *, int8_t);
 int8_t get_all_dist(uint64_t);

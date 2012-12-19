@@ -7,8 +7,13 @@
 #include "heap.h"
 #define MPOOL_ROW_SIZE 1024*64
 #define INIT_HEAP_LENTH 1024
+#define _NINE_DEBUG 1
+
+
 
 int8_t tentative_g_score = 0;
+FILE *debug_log;
+int loop_num = 10000;
 
 struct n3_node{
         struct rb_node rb_nine;
@@ -20,6 +25,27 @@ struct n3_node{
 struct rb_root *proot = NULL;
 void **nine_heap = NULL;
 
+void print_matrix(FILE *fp, uint64_t part)
+{
+	char n, i;
+	for (i = 0; i < 9; i++){
+		n = part >> 4 * i & 0xF;
+		fprintf(fp, "%d\t", n);
+		if ((i+1)%3 == 0)
+			fprintf(fp, "\n");
+	}
+}
+
+
+void log_node(FILE * in, uint64_t part, char zpos, char mht, char rd, short heap_id)
+{
+	fprintf(in, "part is %lx#zpos is %d#mht is %d#rd is %d#heap_id is %d\n", part, zpos, mht, rd, heap_id);
+	print_matrix(in, part);
+	fprintf(in, "********************************************************\n");
+}
+
+	
+	
 int nine_heap_cmp(void **A, int i, int j)
 {
 	struct n3_node *p, *q;
@@ -160,6 +186,11 @@ void init_A_star(int nine[3][3])
 
 	//put node in heap
 	min_heap_insert(&nine_heap, current, nine_heap_cmp, nine_heap_node);
+	#ifdef _NINE_DEBUG
+	debug_log = fopen("solve_nine.log", "a+");
+	#endif
+
+
 }
 
 void A_star(int nine[3][3])
@@ -171,11 +202,15 @@ void A_star(int nine[3][3])
 	int8_t zpos0, zpos1;
 	int8_t mht0, mht1;
 	int8_t rd0, rd1; //tentative_g_score;
-	int16_t heap_id0, heap_id1;
+	uint16_t heap_id0, heap_id1;
 	struct rb_node **select_rb_pos, *select_rb_parent;
 
 
 	while(heap_not_empty()){
+		#ifdef _NINE_DEBUG
+		if (--loop_num == 0)
+			abort();
+		#endif
 		current = heap_minium(nine_heap);
 		if (equal_goal(current->compact)){
 			fprintf(stderr,"binggo!\n");
@@ -183,6 +218,11 @@ void A_star(int nine[3][3])
 		}
 		heap_extract_min(nine_heap, nine_heap_cmp, nine_heap_node);
 		split_data(current->compact, &part0, &zpos0, &mht0, &rd0, &heap_id0);
+		#ifdef _NINE_DEBUG
+		fprintf(debug_log, "checkout a node:\n");
+		log_node(debug_log, part0, zpos0, mht0, rd0, heap_id0);
+		fprintf(debug_log, "\n\n");
+		#endif
 		current->compact = zero_heap_id(current->compact);
 		for (i = 0; i < 4; i++){
 			part1 = partern_swap(part0, i, zpos0, &zpos1);
@@ -190,20 +230,41 @@ void A_star(int nine[3][3])
 				continue;
 			mht1 = update_mht_dist(part0, mht0, zpos0, zpos1);
 			tentative_g_score = rd0 + 1;
+			#ifdef _NINE_DEBUG
+			fprintf(debug_log, "calculate  node number:\n");
+			log_node(debug_log, part1, zpos1, mht1, tentative_g_score, 0);
+			#endif
 			select_node = search_node(part1, proot, &select_rb_pos, &select_rb_parent);
 			if (!select_node){
 				part1 = join_data(part1, zpos1, mht1, tentative_g_score, 0);
 				generate_node(&select_node, part1, current);
 				link_node(select_node, proot, select_rb_pos, select_rb_parent);
 				min_heap_insert(&nine_heap, select_node, nine_heap_cmp, nine_heap_node);
+				#ifdef _NINE_DEBUG
+				fprintf(debug_log, "genenrate new  node add in: %lx, heap id is %d\n", select_node->compact, get_heap_id(select_node->compact));
+				fprintf(debug_log, "\n\n");
+				#endif
 				continue;
 			}
-			if (heap_id1 = get_heap_id(select_node->compact))
+			if ((heap_id1 = get_heap_id(select_node->compact)) == 0){
+				#ifdef _NINE_DEBUG
+				fprintf(debug_log, "node %lx already in close set, with heap id %d", select_node->compact, get_heap_id(select_node->compact));
+				fprintf(debug_log, "\n\n");
+				#endif
 				continue;
-			if (get_rd(select_node->compact) >= tentative_g_score){
+			}
+			if (get_rd(select_node->compact) > tentative_g_score){
 				select_node->pre = current;
 				set_rd(&select_node->compact, tentative_g_score);
+				#ifdef _NINE_DEBUG
+				fprintf(debug_log, "node %lx's rd can be shorter to %d, with origin heap id %d\n", select_node->compact, tentative_g_score,get_heap_id(select_node->compact));
+				#endif
 				min_heap_decrease_key(nine_heap, heap_id1, nine_heap_cmp, nine_heap_node);
+				#ifdef _NINE_DEBUG
+				fprintf(debug_log, "node %lx's heap id is %d", select_node->compact, get_heap_id(select_node->compact));
+				fprintf(debug_log, "\n\n");
+				#endif
+
 			}
 		}
 	}
