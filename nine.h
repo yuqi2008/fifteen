@@ -21,6 +21,8 @@ uint16_t get_heap_id(uint64_t);
 int8_t get_rd(uint64_t);
 void set_rd(uint64_t *, int8_t);
 int8_t get_all_dist(uint64_t);
+char get_move_direct(char, char);
+
 
 
 

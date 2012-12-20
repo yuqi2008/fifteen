@@ -5,15 +5,17 @@
 #include "rbtree.h"
 #include "nine.h"
 #include "heap.h"
+#include "direct_stack.h"
 #define MPOOL_ROW_SIZE 1024*64
 #define INIT_HEAP_LENTH 1024
-#define _NINE_DEBUG 1
+//#define _NINE_DEBUG 
 
 
 
 int8_t tentative_g_score = 0;
 FILE *debug_log;
-int loop_num = 10000;
+int loop_num = 8192;
+char heap_change = 0;
 
 struct n3_node{
         struct rb_node rb_nine;
@@ -193,7 +195,38 @@ void init_A_star(int nine[3][3])
 
 }
 
-void A_star(int nine[3][3])
+void free_A_star(void){
+	if (nine_heap)
+		free_heap(nine_heap);
+	free_all_mpool();
+	if (proot)
+		free(proot);
+}
+
+void reconstruct_path(struct n3_node *data_node)
+{
+	struct n3_node  *pre_node, *suc_node;
+	char szpos, pzpos;
+
+	suc_node = data_node;
+	pre_node = suc_node->pre;
+	dstack_empty();
+
+	while(pre_node){
+		szpos = get_zero_pos(suc_node->compact);
+		pzpos = get_zero_pos(pre_node->compact);
+		dstack_push(get_move_direct(pzpos, szpos));
+		suc_node = pre_node;
+		pre_node = pre_node->pre;
+	}
+	pop_print_dstack();
+}
+
+
+
+	
+
+char A_star(int nine[3][3])
 {
 	init_A_star(nine);
 	int i;
@@ -204,6 +237,7 @@ void A_star(int nine[3][3])
 	int8_t rd0, rd1; //tentative_g_score;
 	uint16_t heap_id0, heap_id1;
 	struct rb_node **select_rb_pos, *select_rb_parent;
+	char success = 0;
 
 
 	while(heap_not_empty()){
@@ -213,8 +247,10 @@ void A_star(int nine[3][3])
 		#endif
 		current = heap_minium(nine_heap);
 		if (equal_goal(current->compact)){
-			fprintf(stderr,"binggo!\n");
-			exit(0);
+			fprintf(stderr,"binggo!, %d\n", heap_size);
+			reconstruct_path(current);
+			success = 1;
+			break;
 		}
 		heap_extract_min(nine_heap, nine_heap_cmp, nine_heap_node);
 		split_data(current->compact, &part0, &zpos0, &mht0, &rd0, &heap_id0);
@@ -253,7 +289,13 @@ void A_star(int nine[3][3])
 				#endif
 				continue;
 			}
-			if (get_rd(select_node->compact) > tentative_g_score){
+			if (get_rd(select_node->compact) >= tentative_g_score){
+				#ifdef _NINE_DEBUG
+				if (get_rd(select_node->compact) == tentative_g_score){
+					fprintf(stderr, "node %lx's heap_id is %d\n", select_node->compact, get_heap_id(select_node->compact));
+					heap_change = 1;
+				}
+				#endif
 				select_node->pre = current;
 				set_rd(&select_node->compact, tentative_g_score);
 				#ifdef _NINE_DEBUG
@@ -263,14 +305,21 @@ void A_star(int nine[3][3])
 				#ifdef _NINE_DEBUG
 				fprintf(debug_log, "node %lx's heap id is %d", select_node->compact, get_heap_id(select_node->compact));
 				fprintf(debug_log, "\n\n");
+				if (heap_change == 1){
+					heap_change = 0;
+					fprintf(stderr, "node %lx's heap_id is %d\n", select_node->compact, get_heap_id(select_node->compact));
+					fprintf(stderr, "*******************************************\n\n");
+				}
 				#endif
 
 			}
 		}
 	}
-
+	#ifdef _NINE_DEBUG
 	fprintf(stderr, "failed at array size %d\n", array_size);
-
+	#endif
+	free_A_star();
+	return success;
 	
 }
 

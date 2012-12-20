@@ -178,3 +178,22 @@ char update_mht_dist(unsigned long part, char old_mht, char old_zpos, char new_z
 	return old_mht - g0 -abs_array[e][gn] + gn + abs_array[e][g0];
 }
 
+char get_move_direct(char pre_zpos, char suc_zpos)
+{
+	char t = suc_zpos - pre_zpos;
+	switch(t){
+		case  -3:
+			return TOP;
+		case  3:
+			return DOWN;
+		case -1:
+			return LEFT;
+		case  1:
+			return RIGHT;
+		default:
+			fprintf(stderr, "wrong pre: %d, suc: %d\n", pre_zpos, suc_zpos);
+			abort();
+	}
+}
+
+

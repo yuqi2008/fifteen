@@ -13,3 +13,4 @@ void min_heap_decrease_key(void **, int, HEAP_CMP_FUNC, HEAP_NODE_CALLBACK);
 int heap_not_empty(void);
 
 extern int array_size; 
+extern int heap_size;

@@ -116,8 +116,16 @@ void min_heap_insert(void ***PA, void *key, HEAP_CMP_FUNC heap_cmp, HEAP_NODE_CA
 
 void min_heap_decrease_key(void **A, int i, HEAP_CMP_FUNC heap_cmp, HEAP_NODE_CALLBACK callback)
 {
-	while (i > 1 && (*heap_cmp)(A, i, heap_parent(i)) < 0){
+	while (i > 1 && (*heap_cmp)(A, i, heap_parent(i)) <= 0){
 		heap_swap(A, i, heap_parent(i), callback);
 		i = heap_parent(i);
 	}
 }
+
+void free_heap(void **A)
+{
+	free(A);
+	array_size = 0;
+	heap_size = 0;
+}
+
