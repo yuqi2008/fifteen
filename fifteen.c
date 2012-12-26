@@ -332,30 +332,3 @@ GOD_MODE:
 	return 0;
 }
 
-
-		
-/*
-int
-GetMove(void)
-{
-	int c;
-	int r = 0;
-	do{
-		c = getchar();
-	}while(c == ' ' || c == '\t');
-		
-	while(c != '\n'){
-		if (c < 48 || c > 57)
-			return 0;
-		else
-			r = r * 10 + c - 48;
-		c = getchar();
-	}
-	return r;
-}
-*/
-
-
-
-
-

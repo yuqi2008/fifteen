@@ -6,16 +6,19 @@
 #include "nine.h"
 #include "heap.h"
 #include "direct_stack.h"
-#define MPOOL_ROW_SIZE 1024*64
+#define MPOOL_ROW_SIZE 1024*16
 #define INIT_HEAP_LENTH 1024
 //#define _NINE_DEBUG 
 
 
 
 int8_t tentative_g_score = 0;
+
+#ifdef _NINE_DEBUG
 FILE *debug_log;
 int loop_num = 8192;
 char heap_change = 0;
+#endif
 
 struct n3_node{
         struct rb_node rb_nine;
@@ -317,6 +320,7 @@ char A_star(int nine[3][3])
 	}
 	#ifdef _NINE_DEBUG
 	fprintf(stderr, "failed at array size %d\n", array_size);
+	print_mpool_consumed();
 	#endif
 	free_A_star();
 	return success;
