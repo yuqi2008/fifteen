@@ -23,6 +23,8 @@
 #include <unistd.h>
 #include <time.h>
 #include <string.h>
+#include "nine.h"
+#include "term_mode.h"
 
 
 // constants
@@ -102,6 +104,7 @@ main(int argc, char *argv[])
 
         // prompt for move
         printf("Tile to move: ");
+	fflush(stdout);
         int tile = GetMove();
 
         // move if possible, else report illegality
@@ -203,7 +206,7 @@ draw(void)
  * returns false. 
  */
 
-bool
+/*bool
 move(int tile)
 {
 	int i , j;
@@ -224,7 +227,50 @@ FINDED:
 	}
 	return false;
 	
+}*/
+
+bool
+move(int tile)
+{
+	int x_pos_new, y_pos_new;
+	bool r = false;
+
+	switch (tile){
+		case TOP:
+			x_pos_new = x_pos;
+			y_pos_new = y_pos - 1;
+			break;
+		case LEFT:
+			x_pos_new = x_pos - 1;
+			y_pos_new = y_pos;
+			break;
+		case RIGHT:
+			x_pos_new = x_pos + 1;
+			y_pos_new = y_pos;
+			break;
+		case DOWN:
+			x_pos_new = x_pos;
+			y_pos_new = y_pos + 1;
+			break;
+		default:
+			x_pos_new = y_pos_new = -1;
+			break;
+	}
+
+	if (x_pos_new >= 0 && x_pos_new < d && y_pos_new >= 0 && y_pos_new < d){
+		board[y_pos][x_pos] = board[y_pos_new][x_pos_new];
+		x_pos = x_pos_new;
+		y_pos = y_pos_new;
+		board[y_pos][x_pos] = 0;
+		r = true;
+	}
+	return r;
 }
+
+
+			
+				
+
 
 
 /*
@@ -303,7 +349,7 @@ _swap(int x1, int y1, int x2, int y2)
 }
 
 
-int
+/*int
 GetMove(void)
 {
 	char buf[32];
@@ -331,31 +377,56 @@ GetMove(void)
 GOD_MODE:
 	return 0;
 }
-
-
-		
-/*
-int
-GetMove(void)
-{
-	int c;
-	int r = 0;
-	do{
-		c = getchar();
-	}while(c == ' ' || c == '\t');
-		
-	while(c != '\n'){
-		if (c < 48 || c > 57)
-			return 0;
-		else
-			r = r * 10 + c - 48;
-		c = getchar();
-	}
-	return r;
-}
 */
 
 
+int
+GetMove(void)
+{
+	char buf[4];
+	int i, r = -1;
+
+	if (tty_reset(STDIN_FILENO) != 0){
+		fprintf(stderr, "reset fd failed\n");
+		exit(-1);
+	}
+	if (tty_cbreak(STDIN_FILENO) != 0){
+		fprintf(stderr, "can't go into cbreak mode\n");
+		exit(-1);
+	}
+	while ( r == -1 ){
+		i = read(STDIN_FILENO, buf, 1);
+		if (buf[0] == '\033'){
+			i = read(STDIN_FILENO, buf, 1);
+			if( buf[0] == '['){
+				i = read(STDIN_FILENO, buf, 1);
+				switch (buf[0]){
+					case 'A':
+						r = TOP;
+						break;
+					case 'B':
+						r = DOWN;
+						break;
+					case 'C':
+						r = RIGHT;
+						break;
+					case 'D':
+						r = LEFT;
+						break;
+					default:
+						break;
+				}
+			}
+		}
+	}
+
+	if (tty_reset(STDIN_FILENO) != 0){
+		fprintf(stderr, "reset fd again failed\n");
+		exit(-1);
+	}
+
+	return r;
+}
 
 
 

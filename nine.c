@@ -21,10 +21,10 @@ char down[] = {3, 4, 5, 6, 7, 8, -1, -1, -1};
 
 unsigned long goal_partern;
 
-/*uint64_t zero_heap_id(uint64_t data)
+uint64_t zero_heap_id(uint64_t data)
 {
 	return data & 0xFFFFFFFFFFFFF;
-}*/
+}
 
 int8_t equal_goal(uint64_t data)
 {
@@ -77,10 +77,10 @@ void set_rd(uint64_t *pdata, int8_t new_rd)
 }
 
 
-/*uint16_t get_heap_id(uint64_t data)
+uint16_t get_heap_id(uint64_t data)
 {
 	return data>>52 & 0xFFF;
-}*/
+}
 
 
 unsigned long get_data_partern(unsigned long data)
@@ -147,17 +147,19 @@ unsigned long partern_swap(unsigned long data_partern, char direct, char zpos,  
 }
 
 
-void split_data(uint64_t data, uint64_t *ppart, int8_t *pzpos, int8_t *pmht, int8_t *prd)
+void split_data(uint64_t data, uint64_t *ppart, int8_t *pzpos, int8_t *pmht, int8_t *prd, uint16_t *pheap_id)
 {
 	*ppart = data & 0xFFFFFFFFF;
 	*pzpos = data >> 36 & 0xF;
 	*pmht  = data >> 40 & 0x3F;
 	*prd   = data >> 46 & 0x3F;
+	*pheap_id = data >> 52 &0xFFF;
 }
 
-uint64_t join_data(uint64_t part, int8_t zpos, int8_t mht, int8_t rd)
+uint64_t join_data(uint64_t part, int8_t zpos, int8_t mht, int8_t rd, uint16_t heap_id)
 {
-	unsigned long t = rd;
+	unsigned long t = heap_id;
+	t = t << 6 | rd;
 	t = t << 6 | mht;
 	t = t << 4 | zpos;
 	t = t << 36 | part;
@@ -175,4 +177,23 @@ char update_mht_dist(unsigned long part, char old_mht, char old_zpos, char new_z
 
 	return old_mht - g0 -abs_array[e][gn] + gn + abs_array[e][g0];
 }
+
+char get_move_direct(char pre_zpos, char suc_zpos)
+{
+	char t = suc_zpos - pre_zpos;
+	switch(t){
+		case  -3:
+			return TOP;
+		case  3:
+			return DOWN;
+		case -1:
+			return LEFT;
+		case  1:
+			return RIGHT;
+		default:
+			fprintf(stderr, "wrong pre: %d, suc: %d\n", pre_zpos, suc_zpos);
+			abort();
+	}
+}
+
 

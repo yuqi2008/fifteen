@@ -14,6 +14,19 @@ struct mpool_set{
 
 struct mpool_set mpool_set_array[SET_MAX];
 
+void print_mpool_consumed(void)
+{
+	long total = 0;
+	struct mpool_set  *p = mpool_set_array + mpool_set_used;
+
+	int used_rows = mpool_set_used;
+	if (used_rows)
+		total += used_rows * mpool_set_size * mpool_quantum_size;
+	total += p->current * mpool_quantum_size;
+	printf("mpool now consumes %ld bytes, current is %d\n", total, p->current);
+}
+
+
 void init_mpool(int set_size, int quantum_size)
 {
 	struct mpool_set *p;
