@@ -268,7 +268,7 @@ void reconstruct_path(struct n3_node *data_node)
 	pop_print_dstack();
 }
 
-char DFA_star(int nine[3][3])
+bool DFA_star(int nine[3][3])
 {
 	struct n3_node *current;
 	int bound = init_DFA_star(nine, &current);
@@ -277,10 +277,13 @@ char DFA_star(int nine[3][3])
 	do{
 		current->compact = set_serial(current->compact, time_stamp);
 		bound = dfs(current, bound);
-		if (dfa_solved == true)
+		if (dfa_solved == true){
+			fprintf(stderr, "binggo! times %d\n", time_stamp);
 			break;
+		}
 		time_stamp++;
 	}while(bound < 64);
+	return dfa_solved;
 }
 
 int dfs(struct n3_node *root, int bound)
@@ -344,18 +347,6 @@ int dfs(struct n3_node *root, int bound)
 	return new_bound;
 }
 
-
-			
-			
-
-
-
-
-
-
-
-
-	
 
 
 char A_star(int nine[3][3])

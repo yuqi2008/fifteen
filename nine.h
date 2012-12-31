@@ -23,6 +23,7 @@ void set_rd(uint64_t *, int8_t);
 int8_t get_mht(uint64_t);
 int8_t get_all_dist(uint64_t);
 char get_move_direct(char, char);
+uint64_t set_serial(uint64_t, uint16_t);
 
 
 
