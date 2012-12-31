@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "mpool.h"
 //#include "solve_nine.h"
 #include "rbtree.h"
@@ -30,7 +31,7 @@ struct rb_root *proot = NULL;
 void **nine_heap = NULL;
 
 //for dfs
-int new_bound;
+int new_bound, time_stamp;
 bool dfa_solved = false;
 
 
@@ -72,7 +73,7 @@ void nine_heap_node(void *element, int i)
 	struct n3_node *p;
 	long t = 0xFFF;
 	if (i == 1<<12){
-		fprintf(stderr, "overflow, %d\n", tentative_g_score);
+		fprintf(stderr, "overflow\n");
 		abort();
 	}
 
@@ -163,7 +164,7 @@ void generate_node(struct n3_node **pnode, uint64_t data, struct n3_node *pre_no
 	rb_init_node(&(*pnode)->rb_nine);
 }
 
-int init_DFA_star(int nine[3][3])
+int init_DFA_star(int nine[3][3], struct n3_node **ppnode)
 {
 	
 	//init mpool
@@ -193,9 +194,11 @@ int init_DFA_star(int nine[3][3])
 	search_node(current->compact, proot, &nine_rb_pos, &nine_parent);
 	link_node(current, proot, nine_rb_pos, nine_parent);
 
+
 	#ifdef _NINE_DEBUG
 	debug_log = fopen("solve_nine.log", "a+");
 	#endif
+	*ppnode = current;
 	return mht;
 }
 
@@ -284,11 +287,12 @@ int dfs(struct n3_node *root, int bound)
 {
 	uint16_t heap_id0, heap_id1;
 	struct n3_node *current, *select_node;
+	struct rb_node **select_rb_pos, *select_rb_parent;
 	uint64_t part0, part1;
 	int8_t zpos0, zpos1;
 	int8_t mht0, mht1;
 	int8_t rd0, rd1; //tentative_g_score;
-	int b;
+	int b, i;
 
 	split_data(root->compact, &part0, &zpos0, &mht0, &rd0, &heap_id0);
 	if (mht0 == 0){
@@ -313,7 +317,7 @@ int dfs(struct n3_node *root, int bound)
 			rd1 = get_rd(select_node->compact);
 			mht1 = get_mht(select_node->compact);
 
-			if ((heap_id1 = get_heap_id(select_node)) == time_stamp)
+			if ((heap_id1 = get_heap_id(select_node->compact)) == time_stamp){
 				if (rd0 + 1 < rd1){
 					set_rd(&select_node->compact, rd0 + 1);
 					rd1 = rd0 + 1;
