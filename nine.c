@@ -83,6 +83,14 @@ uint16_t get_heap_id(uint64_t data)
 }
 
 
+uint64_t set_serial(uint64_t data, uint16_t serial)
+{
+	uint64_t t = serial & 0xFFF;
+	t <<= 52;
+	return zero_heap_id(data) | t;
+}
+
+
 unsigned long get_data_partern(unsigned long data)
 {
 	return data & 0xFFFFFFFFF;
@@ -154,6 +162,11 @@ void split_data(uint64_t data, uint64_t *ppart, int8_t *pzpos, int8_t *pmht, int
 	*pmht  = data >> 40 & 0x3F;
 	*prd   = data >> 46 & 0x3F;
 	*pheap_id = data >> 52 &0xFFF;
+}
+
+int8_t get_mht(uint64_t data)
+{
+	return data >> 40 &0x3F;
 }
 
 uint64_t join_data(uint64_t part, int8_t zpos, int8_t mht, int8_t rd, uint16_t heap_id)

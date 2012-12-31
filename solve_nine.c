@@ -12,7 +12,6 @@
 
 
 
-int8_t tentative_g_score = 0;
 
 #ifdef _NINE_DEBUG
 FILE *debug_log;
@@ -159,6 +158,42 @@ void generate_node(struct n3_node **pnode, uint64_t data, struct n3_node *pre_no
 	rb_init_node(&(*pnode)->rb_nine);
 }
 
+int init_DFA_star(int nine[3][3])
+{
+	
+	//init mpool
+	init_mpool(MPOOL_ROW_SIZE, sizeof(struct n3_node));
+	
+	//init rbtree
+	proot = malloc(sizeof(struct rb_root));
+	RB_EMPTY_ROOT(proot);
+
+	//init partern
+	init_goal();
+	uint64_t part;
+	uint8_t zpos, mht, rd = 0;
+	uint16_t heap_id = 0;
+	part = array2long(nine, &zpos);
+	mht = mht_dist(part);
+	part = join_data(part, zpos, mht, rd, heap_id);
+	
+
+	//generate first node
+	struct n3_node *current;
+	generate_node(&current, part, NULL);
+
+
+	//put node in rbtree
+	struct rb_node **nine_rb_pos, *nine_parent;
+	search_node(current->compact, proot, &nine_rb_pos, &nine_parent);
+	link_node(current, proot, nine_rb_pos, nine_parent);
+
+	#ifdef _NINE_DEBUG
+	debug_log = fopen("solve_nine.log", "a+");
+	#endif
+	return mht;
+}
+
 void init_A_star(int nine[3][3])
 {
 	//init mpool
@@ -225,9 +260,81 @@ void reconstruct_path(struct n3_node *data_node)
 	pop_print_dstack();
 }
 
+char DFA_star(int nine[3][3])
+{
+	struct n3_node *current;
+	int bound = init_DFA_star(nine, &current);
+	dfa_solved = false;
+	time_stamp = 1;
+	do{
+		current->compact = set_serial(current->compact, time_stamp);
+		bound = dfs(current, bound);
+		if (dfa_solved == true)
+			break;
+		time_stamp++;
+	}while(bound < 64);
+}
+
+int dfs(struct n3_node *root, int bound)
+{
+	uint16_t heap_id0, heap_id1;
+	struct n3_node *current, *select_node;
+	uint64_t part0, part1;
+	int8_t zpos0, zpos1;
+	int8_t mht0, mht1;
+	int8_t rd0, rd1; //tentative_g_score;
+	int b, new_bound;
+
+	split_data(root->compact, &part0, &zpos0, &mht0, &rd0, &heap_id0);
+	if (mht0 == 0){
+		dfa_solved = true;
+		return 0;
+	}
+
+	new_bound = 64;
+	for (i = 0; i < 4; i++){
+		part1 = partern_swap(part0, i, zpos0, &zpos1);
+		if (!part1)
+			continue;
+		select_node = search_node(part1, proot, &select_rb_pos, &select_rb_parent);
+		if (!select_node){
+			mht1 = update_mht_dist(part0, mht0, zpos0, zpos1);
+			rd1 = rd0 + 1;
+			heap_id1 = time_stamp;
+			part1 = join_data(part1, zpos1, mht1, rd1, heap_id1);
+			generate_node(&select_node, part1, current);
+			link_node(select_node, proot, select_rb_pos, select_rb_parent);
+		}else{
+			rd1 = get_rd(select_node->compact);
+			mht1 = get_mht(select_node->compact);
+
+			if ((heap_id1 = get_heap_id(select_node)) == time_stamp)
+				if (rd0 + 1 < rd1)
+					set_rd(&select_node->compact, rd0 + 1);
+				else
+					continue;
+			}else{
+				if (rd0 + 1 > rd1)
+					continue;
+				else if (rd0 + 1 < rd1)
+					set_rd(&select_node->compact, rd0 + 1);
+
+				select_node->compact = set_serial(select_node->compact, time_stamp);
+			}
+		}
+
+			
+			
+
+
+
+
+
+
 
 
 	
+
 
 char A_star(int nine[3][3])
 {
@@ -241,6 +348,7 @@ char A_star(int nine[3][3])
 	uint16_t heap_id0, heap_id1;
 	struct rb_node **select_rb_pos, *select_rb_parent;
 	char success = 0;
+	int8_t tentative_g_score = 0;
 
 
 	while(heap_not_empty()){
@@ -267,14 +375,16 @@ char A_star(int nine[3][3])
 			part1 = partern_swap(part0, i, zpos0, &zpos1);
 			if (!part1)
 				continue;
-			mht1 = update_mht_dist(part0, mht0, zpos0, zpos1);
+		//	mht1 = update_mht_dist(part0, mht0, zpos0, zpos1);
 			tentative_g_score = rd0 + 1;
 			#ifdef _NINE_DEBUG
+			mht1 = update_mht_dist(part0, mht0, zpos0, zpos1);
 			fprintf(debug_log, "calculate  node number:\n");
 			log_node(debug_log, part1, zpos1, mht1, tentative_g_score, 0);
 			#endif
 			select_node = search_node(part1, proot, &select_rb_pos, &select_rb_parent);
 			if (!select_node){
+				mht1 = update_mht_dist(part0, mht0, zpos0, zpos1);
 				part1 = join_data(part1, zpos1, mht1, tentative_g_score, 0);
 				generate_node(&select_node, part1, current);
 				link_node(select_node, proot, select_rb_pos, select_rb_parent);
@@ -328,16 +438,6 @@ char A_star(int nine[3][3])
 }
 
 		
-
-
-
-	
-
-
-
-
-
-
 
 
 
