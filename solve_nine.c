@@ -29,6 +29,11 @@ struct n3_node{
 struct rb_root *proot = NULL;
 void **nine_heap = NULL;
 
+//for dfs
+int new_bound;
+bool dfa_solved = false;
+
+
 void print_matrix(FILE *fp, uint64_t part)
 {
 	char n, i;
@@ -283,7 +288,7 @@ int dfs(struct n3_node *root, int bound)
 	int8_t zpos0, zpos1;
 	int8_t mht0, mht1;
 	int8_t rd0, rd1; //tentative_g_score;
-	int b, new_bound;
+	int b;
 
 	split_data(root->compact, &part0, &zpos0, &mht0, &rd0, &heap_id0);
 	if (mht0 == 0){
@@ -309,19 +314,32 @@ int dfs(struct n3_node *root, int bound)
 			mht1 = get_mht(select_node->compact);
 
 			if ((heap_id1 = get_heap_id(select_node)) == time_stamp)
-				if (rd0 + 1 < rd1)
+				if (rd0 + 1 < rd1){
 					set_rd(&select_node->compact, rd0 + 1);
-				else
+					rd1 = rd0 + 1;
+				}else
 					continue;
 			}else{
 				if (rd0 + 1 > rd1)
 					continue;
-				else if (rd0 + 1 < rd1)
+				else if (rd0 + 1 < rd1){
 					set_rd(&select_node->compact, rd0 + 1);
-
+				}
+				rd1 = rd0 + 1;
 				select_node->compact = set_serial(select_node->compact, time_stamp);
 			}
 		}
+		if (rd1 + mht1 <= bound)
+			b = rd1 + dfs(select_node, bound - rd1);
+		else
+			b = rd1 + mht1;
+		if (dfa_solved)
+			return b;
+		new_bound = new_bound > b ? b: new_bound;
+	}
+	return new_bound;
+}
+
 
 			
 			
