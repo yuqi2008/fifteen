@@ -31,7 +31,7 @@ struct rb_root *proot = NULL;
 void **nine_heap = NULL;
 
 //for dfs
-int new_bound, time_stamp;
+int time_stamp;
 bool dfa_solved = false;
 
 
@@ -196,7 +196,7 @@ int init_DFA_star(int nine[3][3], struct n3_node **ppnode)
 
 
 	#ifdef _NINE_DEBUG
-	debug_log = fopen("solve_nine.log", "a+");
+	debug_log = fopen("dfa_nine.log", "a+");
 	#endif
 	*ppnode = current;
 	return mht;
@@ -282,7 +282,7 @@ bool DFA_star(int nine[3][3])
 			break;
 		}
 		time_stamp++;
-	}while(bound < 64);
+	}while(bound < 128);
 	return dfa_solved;
 }
 
@@ -298,12 +298,19 @@ int dfs(struct n3_node *root, int bound)
 	int b, i;
 
 	split_data(root->compact, &part0, &zpos0, &mht0, &rd0, &heap_id0);
+	#ifdef _NINE_DEBUG
+	fprintf(debug_log, "dfs checkout a node:\n");
+	log_node(debug_log, part0, zpos0, mht0, rd0, heap_id0);
+	fprintf(debug_log, "bound is %d\n", bound);
+	fprintf(debug_log, "\n\n");
+	#endif
 	if (mht0 == 0){
 		dfa_solved = true;
 		return 0;
 	}
 
-	new_bound = 64;
+	int new_bound = 64;
+	current = root;
 	for (i = 0; i < 4; i++){
 		part1 = partern_swap(part0, i, zpos0, &zpos1);
 		if (!part1)
@@ -316,34 +323,92 @@ int dfs(struct n3_node *root, int bound)
 			part1 = join_data(part1, zpos1, mht1, rd1, heap_id1);
 			generate_node(&select_node, part1, current);
 			link_node(select_node, proot, select_rb_pos, select_rb_parent);
+			#ifdef _NINE_DEBUG
+			fprintf(debug_log, "generate node\n");
+			log_node(debug_log, part1, zpos1, mht1, rd1, heap_id1);
+			fprintf(debug_log, "\n\n");
+			#endif
 		}else{
 			rd1 = get_rd(select_node->compact);
 			mht1 = get_mht(select_node->compact);
+			#ifdef _NINE_DEBUG
+			fprintf(debug_log, "a exist node\n");
+			log_node(debug_log, get_data_partern(select_node->compact), get_zero_pos(select_node->compact), mht1, rd1, get_heap_id(select_node->compact));
+			fprintf(debug_log, "\n\n");
+			#endif
+
 
 			if ((heap_id1 = get_heap_id(select_node->compact)) == time_stamp){
+				#ifdef _NINE_DEBUG
+				fprintf(debug_log, "already visit in timestamp %d\n", time_stamp);
+				#endif
 				if (rd0 + 1 < rd1){
+					#ifdef _NINE_DEBUG
+					fprintf(debug_log, "rd1: %d is great than rd0+1:%d, reset it\n", rd1, rd0+1);
+					#endif
 					set_rd(&select_node->compact, rd0 + 1);
 					rd1 = rd0 + 1;
-				}else
-					continue;
-			}else{
-				if (rd0 + 1 > rd1)
-					continue;
-				else if (rd0 + 1 < rd1){
-					set_rd(&select_node->compact, rd0 + 1);
+
+				}else{
+					#ifdef _NINE_DEBUG
+					fprintf(debug_log, "rd1: %d is equal or less than rd0+1: %d, cancel it\n", rd1, rd0+1);
+					#endif
+
+					b = 63;
+					goto CANCEL;
+				
 				}
-				rd1 = rd0 + 1;
+
+			}else{
+				#ifdef _NINE_DEBUG
+				fprintf(debug_log, "first visit in timestamp %d\n", time_stamp);
+				#endif
+				if (rd0 + 1 > rd1){
+					#ifdef _NINE_DEBUG
+					fprintf(debug_log, "rd1: %d is less than rd0+1: %d, cancel it\n", rd1, rd0+1);
+					#endif
+					b = 63;
+					goto CANCEL;
+				}else if (rd0 + 1 < rd1){
+					#ifdef _NINE_DEBUG
+					fprintf(debug_log, "rd1: %d is great than rd0+1:%d, reset it\n", rd1, rd0+1);
+					#endif
+					
+					set_rd(&select_node->compact, rd0 + 1);
+					rd1 = rd0 + 1;
+				}else{
+					#ifdef _NINE_DEBUG
+					fprintf(debug_log, "rd1: %d is equal to rd0+1:%d, no change\n", rd1, rd0+1);
+					#endif
+				}
+				
+
 				select_node->compact = set_serial(select_node->compact, time_stamp);
 			}
 		}
-		if (rd1 + mht1 <= bound)
+		if (rd1 + mht1 <= bound){
+			#ifdef _NINE_DEBUG
+			fprintf(debug_log, "recursive call dfs, with bound %d\n\n", bound -rd1);
+			#endif
 			b = rd1 + dfs(select_node, bound - rd1);
-		else
+		}else{
+			#ifdef _NINE_DEBUG
+			fprintf(debug_log, "genenrate b: %d\n\n", rd1+mht1);
+			#endif
 			b = rd1 + mht1;
+		}
 		if (dfa_solved)
 			return b;
+CANCEL:
 		new_bound = new_bound > b ? b: new_bound;
+		#ifdef _NINE_DEBUG
+		fprintf(debug_log, "generate new_bound:%d\n\n", new_bound);
+		#endif
 	}
+	#ifdef _NINE_DEBUG
+	fprintf(debug_log, "end a call with root: %lx, select_node: %lx,bound: %d, return new_bound:%d", current->compact, select_node->compact, bound, new_bound);
+	fprintf(debug_log, "\n\n");
+	#endif
 	return new_bound;
 }
 

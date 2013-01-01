@@ -1,12 +1,12 @@
 #include "solve_nine.h"
 #include <stdio.h>
 
-int test_array[3][3] = { 8, 3, 7, 4, 0, 1, 6, 2, 5};
+int test_array[3][3] = { 2, 8, 6, 7, 5, 4, 1, 3, 0};
 
 int 
 main(int argc, char **argv)
 {
-//	A_star(test_array);
+	//A_star(test_array);
 	DFA_star(test_array);
 	printf("init completed\n");
 }
