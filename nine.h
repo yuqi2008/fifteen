@@ -19,7 +19,7 @@ int8_t equal_goal(uint64_t);
 uint64_t zero_heap_id(uint64_t);
 uint16_t get_heap_id(uint64_t);
 int8_t get_rd(uint64_t);
-void set_rd(uint64_t *, int8_t);
+uint64_t set_rd(uint64_t, uint8_t);
 int8_t get_mht(uint64_t);
 int8_t get_all_dist(uint64_t);
 char get_move_direct(char, char);

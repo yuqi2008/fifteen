@@ -33,6 +33,8 @@ void **nine_heap = NULL;
 //for dfs
 int time_stamp;
 bool dfa_solved = false;
+struct n3_node *psuccess;
+int rcount = 0;
 
 
 void print_matrix(FILE *fp, uint64_t part)
@@ -278,7 +280,8 @@ bool DFA_star(int nine[3][3])
 		current->compact = set_serial(current->compact, time_stamp);
 		bound = dfs(current, bound);
 		if (dfa_solved == true){
-			fprintf(stderr, "binggo! times %d\n", time_stamp);
+			fprintf(stderr, "binggo! times %d, rcount:%d\n", time_stamp,rcount);
+			reconstruct_path(psuccess);
 			break;
 		}
 		time_stamp++;
@@ -297,7 +300,8 @@ int dfs(struct n3_node *root, int bound)
 	int8_t rd0, rd1; //tentative_g_score;
 	int b, i;
 
-	split_data(root->compact, &part0, &zpos0, &mht0, &rd0, &heap_id0);
+	current = root;
+	split_data(current->compact, &part0, &zpos0, &mht0, &rd0, &heap_id0);
 	#ifdef _NINE_DEBUG
 	fprintf(debug_log, "dfs checkout a node:\n");
 	log_node(debug_log, part0, zpos0, mht0, rd0, heap_id0);
@@ -306,11 +310,11 @@ int dfs(struct n3_node *root, int bound)
 	#endif
 	if (mht0 == 0){
 		dfa_solved = true;
+		psuccess = current;
 		return 0;
 	}
 
 	int new_bound = 64;
-	current = root;
 	for (i = 0; i < 4; i++){
 		part1 = partern_swap(part0, i, zpos0, &zpos1);
 		if (!part1)
@@ -331,13 +335,26 @@ int dfs(struct n3_node *root, int bound)
 		}else{
 			rd1 = get_rd(select_node->compact);
 			mht1 = get_mht(select_node->compact);
+			heap_id1 = get_heap_id(select_node->compact);
 			#ifdef _NINE_DEBUG
 			fprintf(debug_log, "a exist node\n");
 			log_node(debug_log, get_data_partern(select_node->compact), get_zero_pos(select_node->compact), mht1, rd1, get_heap_id(select_node->compact));
 			fprintf(debug_log, "\n\n");
 			#endif
+			if (rd1 > rd0 + 1){
+				select_node->compact = set_rd(select_node->compact, rd0+1);
+				select_node->pre = current;
+				printf("CHANGE!\t");
+			}else if(rd1 == rd0 + 1 && heap_id1 < time_stamp)
+				select_node->compact = set_serial(select_node->compact, time_stamp);
+			else {
+				b = 63;
+				goto CANCEL;
+			}
+				
+				
 
-
+/*
 			if ((heap_id1 = get_heap_id(select_node->compact)) == time_stamp){
 				#ifdef _NINE_DEBUG
 				fprintf(debug_log, "already visit in timestamp %d\n", time_stamp);
@@ -348,6 +365,7 @@ int dfs(struct n3_node *root, int bound)
 					#endif
 					set_rd(&select_node->compact, rd0 + 1);
 					rd1 = rd0 + 1;
+					select_node->pre = current;
 
 				}else{
 					#ifdef _NINE_DEBUG
@@ -376,6 +394,7 @@ int dfs(struct n3_node *root, int bound)
 					
 					set_rd(&select_node->compact, rd0 + 1);
 					rd1 = rd0 + 1;
+					select_node->pre = current;
 				}else{
 					#ifdef _NINE_DEBUG
 					fprintf(debug_log, "rd1: %d is equal to rd0+1:%d, no change\n", rd1, rd0+1);
@@ -384,21 +403,23 @@ int dfs(struct n3_node *root, int bound)
 				
 
 				select_node->compact = set_serial(select_node->compact, time_stamp);
-			}
+			}*/
 		}
-		if (rd1 - rd0 + mht1 <= bound){
+		if (1 + mht1 <= bound){
 			#ifdef _NINE_DEBUG
 			fprintf(debug_log, "recursive call dfs, with bound %d\n\n", bound -rd1);
 			#endif
-			b = rd1 -rd0 + dfs(select_node, bound - rd1 + rd0);
+			b = 1 + dfs(select_node, bound - 1);
 		}else{
 			#ifdef _NINE_DEBUG
 			fprintf(debug_log, "genenrate b: %d\n\n", rd1+mht1);
 			#endif
-			b = rd1 - rd0 + mht1;
+			b = 1 + mht1;
 		}
-		if (dfa_solved)
+		if (dfa_solved){
+			rcount++;
 			return b;
+		}
 CANCEL:
 		new_bound = new_bound > b ? b: new_bound;
 		#ifdef _NINE_DEBUG
@@ -488,7 +509,7 @@ char A_star(int nine[3][3])
 				}
 				#endif
 				select_node->pre = current;
-				set_rd(&select_node->compact, tentative_g_score);
+				select_node->compact = set_rd(select_node->compact, tentative_g_score);
 				#ifdef _NINE_DEBUG
 				fprintf(debug_log, "node %lx's rd can be shorter to %d, with origin heap id %d\n", select_node->compact, tentative_g_score,get_heap_id(select_node->compact));
 				#endif

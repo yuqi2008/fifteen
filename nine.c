@@ -66,14 +66,14 @@ int8_t get_rd(uint64_t data)
 	return data >> 46 & 0x3F;
 }
 
-void set_rd(uint64_t *pdata, int8_t new_rd)
+uint64_t set_rd(uint64_t data, uint8_t new_rd)
 {
-	unsigned long t = 0x3F;
-	t = ~(t << 46);
-	*pdata &= t;
-	t = new_rd;
-	t = t << 46;
-	*pdata |= t;
+	 uint64_t part = data & 0xFFFFFFFFF;
+	 uint8_t zpos = data >> 36 & 0xF;
+	 uint8_t mht  = data >> 40 & 0x3F;
+	 uint8_t rd   = new_rd;
+	 uint16_t heap_id = data >> 52 &0xFFF;
+	 return join_data(part, zpos, mht, rd, heap_id);
 }
 
 
