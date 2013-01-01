@@ -386,16 +386,16 @@ int dfs(struct n3_node *root, int bound)
 				select_node->compact = set_serial(select_node->compact, time_stamp);
 			}
 		}
-		if (rd1 + mht1 <= bound){
+		if (rd1 - rd0 + mht1 <= bound){
 			#ifdef _NINE_DEBUG
 			fprintf(debug_log, "recursive call dfs, with bound %d\n\n", bound -rd1);
 			#endif
-			b = rd1 + dfs(select_node, bound - rd1);
+			b = rd1 -rd0 + dfs(select_node, bound - rd1 + rd0);
 		}else{
 			#ifdef _NINE_DEBUG
 			fprintf(debug_log, "genenrate b: %d\n\n", rd1+mht1);
 			#endif
-			b = rd1 + mht1;
+			b = rd1 - rd0 + mht1;
 		}
 		if (dfa_solved)
 			return b;
