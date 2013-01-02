@@ -7,6 +7,8 @@ int
 main(int argc, char **argv)
 {
 	//A_star(test_array);
-	DFA_star(test_array);
+	IDA_star(test_array);
+	printf("*****************************************\n\n");
+	IDA_star(test_array);
 	printf("init completed\n");
 }

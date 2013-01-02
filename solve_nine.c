@@ -174,7 +174,8 @@ int init_DFA_star(int nine[3][3], struct n3_node **ppnode)
 	
 	//init rbtree
 	proot = malloc(sizeof(struct rb_root));
-	RB_EMPTY_ROOT(proot);
+	//RB_EMPTY_ROOT(proot);
+	proot->rb_node = NULL;
 
 	//init partern
 	init_goal();
@@ -211,7 +212,8 @@ void init_A_star(int nine[3][3])
 	
 	//init rbtree
 	proot = malloc(sizeof(struct rb_root));
-	RB_EMPTY_ROOT(proot);
+	//RB_EMPTY_ROOT(proot);
+	proot->rb_node = NULL;
 
 	//init heap
 	alloc_heap(&nine_heap, INIT_HEAP_LENTH);
@@ -251,6 +253,13 @@ void free_A_star(void){
 		free(proot);
 }
 
+
+void free_IDA_star(void){
+	free_all_mpool();
+	if (proot)
+		free(proot);
+}
+
 void reconstruct_path(struct n3_node *data_node)
 {
 	struct n3_node  *pre_node, *suc_node;
@@ -270,7 +279,25 @@ void reconstruct_path(struct n3_node *data_node)
 	pop_print_dstack();
 }
 
-bool DFA_star(int nine[3][3])
+void time_stamp_increase(void)
+{
+	if (time_stamp == 1 << 12 - 1)
+		time_stamp = 0;
+	else
+		time_stamp++;
+}
+
+int time_stamp_cmp(int dest, int origin)
+{
+	int t = dest - origin;
+	if (origin != 0)
+		return t;
+	else
+		return -t;
+}
+		
+
+bool IDA_star(int nine[3][3])
 {
 	struct n3_node *current;
 	int bound = init_DFA_star(nine, &current);
@@ -284,8 +311,9 @@ bool DFA_star(int nine[3][3])
 			reconstruct_path(psuccess);
 			break;
 		}
-		time_stamp++;
+		time_stamp_increase();
 	}while(bound < 128);
+	free_IDA_star();
 	return dfa_solved;
 }
 
@@ -336,6 +364,9 @@ int dfs(struct n3_node *root, int bound)
 			rd1 = get_rd(select_node->compact);
 			mht1 = get_mht(select_node->compact);
 			heap_id1 = get_heap_id(select_node->compact);
+			if (heap_id1 != time_stamp)
+				select_node->compact = set_serial(select_node->compact, time_stamp);
+				
 			#ifdef _NINE_DEBUG
 			fprintf(debug_log, "a exist node\n");
 			log_node(debug_log, get_data_partern(select_node->compact), get_zero_pos(select_node->compact), mht1, rd1, get_heap_id(select_node->compact));
@@ -344,10 +375,8 @@ int dfs(struct n3_node *root, int bound)
 			if (rd1 > rd0 + 1){
 				select_node->compact = set_rd(select_node->compact, rd0+1);
 				select_node->pre = current;
-				printf("CHANGE!\t");
-			}else if(rd1 == rd0 + 1 && heap_id1 < time_stamp)
-				select_node->compact = set_serial(select_node->compact, time_stamp);
-			else {
+				//printf("CHANGE!\t");
+			}else if (rd1 < rd0 + 1 || time_stamp_cmp(heap_id1, time_stamp) == 0){
 				b = 63;
 				goto CANCEL;
 			}
